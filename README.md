@@ -42,11 +42,42 @@ Cuando un conjunto de usuarios consulta un enésimo número (superior a 1000000)
 
 **Preguntas**
 
-* ¿Qué es un Azure Function?
-* ¿Qué es serverless?
-* ¿Qué es el runtime y que implica seleccionarlo al momento de crear el Function App?
-* ¿Por qué es necesario crear un Storage Account de la mano de un Function App?
-* ¿Cuáles son los tipos de planes para un Function App?, ¿En qué se diferencias?, mencione ventajas y desventajas de cada uno de ellos.
-* ¿Por qué la memoization falla o no funciona de forma correcta?
-* ¿Cómo funciona el sistema de facturación de las Function App?
+## ¿Qué es serverless?
+Es un modelo donde no te preocupas por servidores: subes tu código y Azure se encarga de levantar, escalar y apagar la infraestructura. El código corre solo cuando algo lo dispara (una petición HTTP, un timer, una cola…), escala solo y pagas por lo que usas. Ojo: las instancias son **efímeras y sin estado**.
+ 
+## ¿Qué es el runtime y qué implica seleccionarlo?
+Es el lenguaje y su versión (Node.js, .NET, Java, Python, PowerShell) sobre el que corren las funciones. Elegirlo implica:
+- Todas las funciones de la app tienen que estar en ese lenguaje.
+- Define qué sistema operativo y qué planes puedes usar (por ejemplo, Flex Consumption solo funciona en Linux).
+- Afecta el cold start y el consumo de memoria, o sea, el costo.
+- Cambiarlo después no es fácil; casi siempre toca recrear la app.
+## ¿Por qué se necesita un Storage Account?
+Porque el host de Functions no funciona sin él (se conecta por `AzureWebJobsStorage`). Ahí se guardan:
+- El código y la configuración (Azure Files o Blob, según el plan).
+- Las llaves de las funciones y el estado de los triggers/bindings.
+- Las colas y tablas para reintentos y para Durable Functions.
+- Los leases con los que se coordina el escalado entre instancias.
+Si borras el storage, la app deja de funcionar.
+ 
+## Tipos de planes
+ 
+| Plan | En corto | Pro | Contra |
+|---|---|---|---|
+| **Consumption** | Pago por ejecución, escala a 0 | Baratísimo con poco tráfico, con free grant | Legacy, cold starts, sin VNet, timeout máx. de 10 min |
+| **Flex Consumption** | Consumption mejorado | Escala rápido, eliges la memoria, tiene VNet e instancias *always ready*, sin límite de tiempo | Solo Linux, una app por plan, el GB-s es más caro |
+| **Premium** | Instancias pre-calentadas | Sin cold start, con VNet, más potencia | Siempre hay ≥1 instancia encendida, así que es caro (~$175/mes EP1) |
+| **Dedicated** (App Service) | Corre en VMs de un App Service Plan | Costo predecible, puedes reutilizar un plan que ya pagas, Always On | Pagas aunque no haya tráfico, escala más lento |
+ 
+## ¿Por qué falla la memoization?
+1. **La caché vive en RAM.** Si la función se queda quieta unos minutos, Azure apaga la instancia y la caché se pierde. Por eso, después de esperar 5 min, la misma consulta vuelve a tardar igual que la primera vez.
+2. **Cada instancia tiene su propia caché.** Con peticiones concurrentes, Azure puede levantar varias instancias y ninguna comparte lo que calculó la otra.
+3. **La recursión con n > 1.000.000 revienta el stack** (`Maximum call stack size exceeded`). Además, guardar un millón de BigInts consume muchísima memoria.
+Para arreglarlo habría que usar una caché externa (Redis/Table Storage) y un algoritmo iterativo.
+ 
+## ¿Cómo se factura?
+- **Consumption:** se cobra por número de ejecuciones + GB-s (memoria × tiempo). Trae gratis 1M de ejecuciones y 400.000 GB-s al mes por suscripción. Lo mínimo que se cobra por ejecución es 100 ms y 128 MB.
+- **Flex Consumption:** igual (ejecuciones + GB-s), pero el free grant es de 250.000 ejecuciones y 100.000 GB-s. Si tienes instancias *always ready*, pagas además una tarifa base por tenerlas encendidas.
+- **Premium:** se paga por vCPU-s y GB-s de las instancias encendidas, y como siempre hay mínimo una, hay un costo fijo.
+- **Dedicated:** pagas el App Service Plan, sin importar cuántas ejecuciones haya.
+El Storage Account y Application Insights se cobran aparte.
 * Informe
