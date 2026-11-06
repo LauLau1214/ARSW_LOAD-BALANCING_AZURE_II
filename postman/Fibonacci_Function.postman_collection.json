@@ -1,0 +1,31 @@
+{
+	"info": {
+		"name": "ARSW_LOAD-BALANCING_AZURE_II_FUNCTION",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "fibonacci",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"nth\": {{nth}}}"
+				},
+				"url": {
+					"raw": "{{FUNCTION_URL}}",
+					"host": [
+						"{{FUNCTION_URL}}"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
