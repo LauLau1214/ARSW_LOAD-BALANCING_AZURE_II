@@ -2,11 +2,13 @@
   "name": "FunctionProject",
   "version": "1.0.0",
   "description": "",
+  "main": "src/functions/*.js",
   "scripts": {
     "start": "func start",
     "test": "echo \"No tests yet...\""
   },
   "dependencies": {
+    "@azure/functions": "^4.0.0",
     "big-integer": "^1.6.48"
   },
   "devDependencies": {}
